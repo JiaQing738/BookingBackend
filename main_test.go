@@ -23,11 +23,13 @@ func TestMain(m *testing.M) {
 
 	ensureTableExists()
 	code := m.Run()
-	clearTable()
+	clearBookingTable()
+	resetRecord()
+	clearFacilityDetailTable()
 	os.Exit(code)
 }
 
-const tableCreationQuery = `CREATE TABLE IF NOT EXISTS booking.booking
+const bookingTableCreationQuery = `CREATE TABLE IF NOT EXISTS booking.booking
 (
 	id SERIAL,
 	user_id text,
@@ -40,19 +42,57 @@ const tableCreationQuery = `CREATE TABLE IF NOT EXISTS booking.booking
 	CONSTRAINT booking_pkey PRIMARY KEY (id)
 )`
 
+const bookingConfigTableCreationQuery = `CREATE TABLE IF NOT EXISTS booking.booking_config
+(
+	id SERIAL,
+	key text NOT NULL,
+	value text,
+	CONSTRAINT booking_config_pkey PRIMARY KEY (id)
+)`
+
+const facilityDetailTableCreationQuery = `CREATE TABLE IF NOT EXISTS booking.facility_detail
+(
+	id SERIAL,
+	name text UNIQUE,
+	level integer,
+	description text,
+	status text,
+	transaction_dt timestamptz,
+	CONSTRAINT facility_detail_pkey PRIMARY KEY (id)
+)`
+
 func ensureTableExists() {
-	if _, err := a.DB.Exec(tableCreationQuery); err != nil {
+	if _, err := a.DB.Exec(bookingTableCreationQuery); err != nil {
+		log.Fatal(err)
+	}
+
+	if _, err := a.DB.Exec(bookingConfigTableCreationQuery); err != nil {
+		log.Fatal(err)
+	}
+
+	if _, err := a.DB.Exec(facilityDetailTableCreationQuery); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func clearTable() {
+func clearBookingTable() {
 	a.DB.Exec("DELETE FROM booking.booking")
 	a.DB.Exec("ALTER SEQUENCE booking.booking_id_seq RESTART WITH 1")
+	a.DB.Exec("DELETE FROM booking.facility_detail")
+	a.DB.Exec("ALTER SEQUENCE booking.facility_detail_id_seq RESTART WITH 1")
 }
 
-func TestEmptyTable(t *testing.T) {
-	clearTable()
+func clearFacilityDetailTable() {
+	a.DB.Exec("DELETE FROM booking.facility_detail")
+	a.DB.Exec("ALTER SEQUENCE booking.facility_detail_id_seq RESTART WITH 1")
+}
+
+func resetRecord() {
+	a.DB.Exec("UPDATE booking.booking_config SET key='max_hr_per_booking', value='2' WHERE id=1")
+}
+
+func TestEmptyBookingTable(t *testing.T) {
+	clearBookingTable()
 
 	req, _ := http.NewRequest("GET", "/bookings", nil)
 	response := executeRequest(req)
@@ -77,8 +117,8 @@ func checkResponseCode(t *testing.T, expected, actual int) {
 	}
 }
 
-func TestGetNonExistentProduct(t *testing.T) {
-	clearTable()
+func TestGetNonExistentBooking(t *testing.T) {
+	clearBookingTable()
 
 	req, _ := http.NewRequest("GET", "/booking/11", nil)
 	response := executeRequest(req)
@@ -94,7 +134,7 @@ func TestGetNonExistentProduct(t *testing.T) {
 
 func TestCreateBooking(t *testing.T) {
 
-	clearTable()
+	clearBookingTable()
 
 	var jsonStr = []byte(`{"user_id":"test", "email": "test@email.com", "purpose": "nil", "facility_id": 1, "start_dt": "2021-01-24 10:00:00+08", "end_dt": "2021-01-24 18:00:00+08", "transaction_dt": "2021-01-23 10:00:00+08"}`)
 	req, _ := http.NewRequest("POST", "/booking", bytes.NewBuffer(jsonStr))
@@ -111,15 +151,15 @@ func TestCreateBooking(t *testing.T) {
 	}
 
 	if m["user_id"] != "test" {
-		t.Errorf("Expected booking user_id to be 'test'. Got '%v'", m["user_id"])
+		t.Errorf("Expected user_id to be 'test'. Got '%v'", m["user_id"])
 	}
 
 	if m["email"] != "test@email.com" {
-		t.Errorf("Expected booking email to be 'test@email'. Got '%v'", m["email"])
+		t.Errorf("Expected email to be 'test@email'. Got '%v'", m["email"])
 	}
 
 	if m["purpose"] != "nil" {
-		t.Errorf("Expected booking purpose to be 'nil'. Got '%v'", m["purpose"])
+		t.Errorf("Expected purpose to be 'nil'. Got '%v'", m["purpose"])
 	}
 
 	if m["facility_id"] != 1.0 {
@@ -127,7 +167,15 @@ func TestCreateBooking(t *testing.T) {
 	}
 
 	if m["start_dt"] != "2021-01-24 10:00:00+08" {
-		t.Errorf("Expected booking start_dt to be '2021-01-24 10:00:00+08'. Got '%v'", m["start_dt"])
+		t.Errorf("Expected start_dt to be '2021-01-24 10:00:00+08'. Got '%v'", m["start_dt"])
+	}
+
+	if m["end_dt"] != "2021-01-24 18:00:00+08" {
+		t.Errorf("Expected end_dt to be '2021-01-24 18:00:00+08'. Got '%v'", m["end_dt"])
+	}
+
+	if m["transaction_dt"] != "2021-01-23 10:00:00+08" {
+		t.Errorf("Expected transaction_dt to be '2021-01-23 10:00:00+08'. Got '%v'", m["transaction_dt"])
 	}
 
 }
@@ -143,7 +191,7 @@ func addBookings(count int) {
 }
 
 func TestGetBooking(t *testing.T) {
-	clearTable()
+	clearBookingTable()
 	addBookings(1)
 
 	req, _ := http.NewRequest("GET", "/booking/1", nil)
@@ -154,7 +202,7 @@ func TestGetBooking(t *testing.T) {
 
 func TestUpdateBooking(t *testing.T) {
 
-	clearTable()
+	clearBookingTable()
 	addBookings(1)
 
 	req, _ := http.NewRequest("GET", "/booking/1", nil)
@@ -207,7 +255,7 @@ func TestUpdateBooking(t *testing.T) {
 }
 
 func TestDeleteBooking(t *testing.T) {
-	clearTable()
+	clearBookingTable()
 	addBookings(1)
 
 	req, _ := http.NewRequest("GET", "/booking/1", nil)
@@ -220,6 +268,224 @@ func TestDeleteBooking(t *testing.T) {
 	checkResponseCode(t, http.StatusOK, response.Code)
 
 	req, _ = http.NewRequest("GET", "/booking/1", nil)
+	response = executeRequest(req)
+	checkResponseCode(t, http.StatusNotFound, response.Code)
+}
+
+func TestGetBookingConfigs(t *testing.T) {
+
+	req, _ := http.NewRequest("GET", "/bookingConfigs", nil)
+	response := executeRequest(req)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	var result []map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &result)
+
+	if len(result) != 4 {
+		t.Errorf("Expected 4 record. Got %v", len(result))
+	}
+}
+
+const firstConfigKey = "max_hr_per_booking"
+const firstConfigValue = "2"
+
+func TestGetBookingConfig(t *testing.T) {
+
+	req, _ := http.NewRequest("GET", "/bookingConfig/1", nil)
+	response := executeRequest(req)
+
+	var result map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &result)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	if result["key"] != firstConfigKey {
+		t.Errorf("Expected 'max_hr_per_booking'. Got %v", result["key"])
+	}
+	if result["value"] != firstConfigValue {
+		t.Errorf("Expected '2'. Got %v", result["value"])
+	}
+}
+
+func TestUpdateBookingConfig(t *testing.T) {
+
+	req, _ := http.NewRequest("GET", "/bookingConfig/1", nil)
+	response := executeRequest(req)
+	var originalBookingConfig map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &originalBookingConfig)
+
+	var jsonStr = []byte(`{"key":"max_hr_per_booking_updated", "value": "3"}`)
+	req, _ = http.NewRequest("PUT", "/bookingConfig/1", bytes.NewBuffer(jsonStr))
+	req.Header.Set("Content-Type", "application/json")
+
+	response = executeRequest(req)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	var m map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &m)
+
+	if m["key"] != "max_hr_per_booking_updated" {
+		t.Errorf("Expected the key to change from '%v' to 'max_hr_per_booking_updated'. Got '%v'", originalBookingConfig["key"], m["key"])
+	}
+
+	if m["value"] != "3" {
+		t.Errorf("Expected the value to change from '%v' to '3'. Got '%v'", originalBookingConfig["value"], m["value"])
+	}
+
+	if m["id"] != originalBookingConfig["id"] {
+		t.Errorf("Expected the id to remain the same (%v). Got %v", originalBookingConfig["id"], m["id"])
+	}
+}
+
+func TestEmptyFacilityDetailTable(t *testing.T) {
+	clearFacilityDetailTable()
+
+	req, _ := http.NewRequest("GET", "/facilityDetails", nil)
+	response := executeRequest(req)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	if body := response.Body.String(); body != "[]" {
+		t.Errorf("Expected an empty array. Got %s", body)
+	}
+}
+
+func TestGetNonExistentFacilityDetail(t *testing.T) {
+	clearFacilityDetailTable()
+
+	req, _ := http.NewRequest("GET", "/facilityDetail/1", nil)
+	response := executeRequest(req)
+
+	checkResponseCode(t, http.StatusNotFound, response.Code)
+
+	var m map[string]string
+	json.Unmarshal(response.Body.Bytes(), &m)
+	if m["error"] != "Facility detail not found" {
+		t.Errorf("Expected the 'error' key of the response to be set to 'Facility detail not found'. Got '%s'", m["error"])
+	}
+}
+
+func TestCreateFacilityDetail(t *testing.T) {
+	clearFacilityDetailTable()
+
+	var jsonStr = []byte(`{"name":"Meeting Room L1-01", "level": 1, "description": "Meeting Room", "status": "OPEN", "transaction_dt": "2021-01-23 10:00:00+08"}`)
+	req, _ := http.NewRequest("POST", "/facilityDetail", bytes.NewBuffer(jsonStr))
+	req.Header.Set("Content-Type", "application/json")
+
+	response := executeRequest(req)
+	checkResponseCode(t, http.StatusCreated, response.Code)
+
+	var m map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &m)
+
+	if m["id"] != 1.0 {
+		t.Errorf("Expected Facility Detail ID to be '1'. Got '%v'", m["id"])
+	}
+
+	if m["name"] != "Meeting Room L1-01" {
+		t.Errorf("Expected name to be 'Meeting Room L1-01'. Got '%v'", m["name"])
+	}
+
+	if m["level"] != 1.0 {
+		t.Errorf("Expected level to be 1. Got '%v'", m["level"])
+	}
+
+	if m["description"] != "Meeting Room" {
+		t.Errorf("Expected description to be 'Meeting Room'. Got '%v'", m["description"])
+	}
+
+	if m["status"] != "OPEN" {
+		t.Errorf("Expected status to be 'OPEN'. Got '%v'", m["status"])
+	}
+
+	if m["transaction_dt"] != "2021-01-23 10:00:00+08" {
+		t.Errorf("Expected transaction_dt to be '2021-01-23 10:00:00+08'. Got '%v'", m["transaction_dt"])
+	}
+
+}
+
+func addFacilityDetail(count int) {
+	if count < 1 {
+		count = 1
+	}
+
+	for i := 0; i < count; i++ {
+		a.DB.Exec("INSERT INTO booking.facility_detail(name, level, description, status, transaction_dt) VALUES($1, $2, $3, $4, $5)", "Meeting Room L"+strconv.Itoa(i), strconv.Itoa(i), "Meeting Room", "OPEN", "2021-01-24 10:00:00+08")
+	}
+}
+
+func TestGetFacilityDetail(t *testing.T) {
+	clearFacilityDetailTable()
+	addFacilityDetail(1)
+
+	req, _ := http.NewRequest("GET", "/facilityDetail/1", nil)
+	response := executeRequest(req)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+}
+
+func TestUpdateFacilityDetail(t *testing.T) {
+
+	clearFacilityDetailTable()
+	addFacilityDetail(1)
+
+	req, _ := http.NewRequest("GET", "/facilityDetail/1", nil)
+	response := executeRequest(req)
+	var originalFacilityDetail map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &originalFacilityDetail)
+
+	var jsonStr = []byte(`{"name":"Meeting Room L1-01", "level": 1, "description": "Meeting Rm", "status": "OPEN", "transaction_dt": "2021-01-23 12:00:00+08"}`)
+	req, _ = http.NewRequest("PUT", "/facilityDetail/1", bytes.NewBuffer(jsonStr))
+	req.Header.Set("Content-Type", "application/json")
+
+	response = executeRequest(req)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	var m map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &m)
+
+	if m["name"] != "Meeting Room L1-01" {
+		t.Errorf("Expected the name to change from '%v' to 'Meeting Room L1-01'. Got '%v'", originalFacilityDetail["name"], m["name"])
+	}
+
+	if m["level"] != 1.0 {
+		t.Errorf("Expected the level to change from '%v' to 1. Got '%v'", originalFacilityDetail["level"], m["level"])
+	}
+
+	if m["description"] != "Meeting Rm" {
+		t.Errorf("Expected the description to change from '%v' to 'Meeting Rm'. Got '%v'", originalFacilityDetail["description"], m["description"])
+	}
+
+	if m["status"] != "OPEN" {
+		t.Errorf("Expected the status to change from '%v' to 'OPEN'. Got '%v'", originalFacilityDetail["status"], m["status"])
+	}
+
+	if m["transaction_dt"] != "2021-01-23 12:00:00+08" {
+		t.Errorf("Expected the email to change from '%v' to '2021-01-23 12:00:00+08'. Got '%v'", originalFacilityDetail["transaction_dt"], m["transaction_dt"])
+	}
+
+	if m["id"] != originalFacilityDetail["id"] {
+		t.Errorf("Expected the id to remain the same (%v). Got %v", originalFacilityDetail["id"], m["id"])
+	}
+}
+
+func TestDeleteFacilityDetai(t *testing.T) {
+	clearFacilityDetailTable()
+	addFacilityDetail(1)
+
+	req, _ := http.NewRequest("GET", "/facilityDetail/1", nil)
+	response := executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	req, _ = http.NewRequest("DELETE", "/facilityDetail/1", nil)
+	response = executeRequest(req)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	req, _ = http.NewRequest("GET", "/facilityDetail/1", nil)
 	response = executeRequest(req)
 	checkResponseCode(t, http.StatusNotFound, response.Code)
 }
