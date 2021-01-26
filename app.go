@@ -45,6 +45,7 @@ func (a *App) Run(addr string) {
 }
 
 func (a *App) getBooking(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -79,6 +80,7 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 }
 
 func (a *App) getBookings(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	count, _ := strconv.Atoi(r.FormValue("count"))
 	start, _ := strconv.Atoi(r.FormValue("start"))
 
@@ -99,6 +101,7 @@ func (a *App) getBookings(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) createBooking(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	var p booking
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&p); err != nil {
@@ -116,6 +119,7 @@ func (a *App) createBooking(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) updateBooking(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -141,6 +145,7 @@ func (a *App) updateBooking(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) deleteBooking(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -158,6 +163,7 @@ func (a *App) deleteBooking(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) getBookingConfigs(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	count, _ := strconv.Atoi(r.FormValue("count"))
 	start, _ := strconv.Atoi(r.FormValue("start"))
 
@@ -178,6 +184,7 @@ func (a *App) getBookingConfigs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) getBookingConfig(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -200,6 +207,7 @@ func (a *App) getBookingConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) updateBookingConfig(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -225,6 +233,7 @@ func (a *App) updateBookingConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) getFacilityDetail(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -247,6 +256,7 @@ func (a *App) getFacilityDetail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) getFacilityDetails(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	count, _ := strconv.Atoi(r.FormValue("count"))
 	start, _ := strconv.Atoi(r.FormValue("start"))
 
@@ -267,6 +277,7 @@ func (a *App) getFacilityDetails(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) createFacilityDetail(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	var p facilityDetail
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&p); err != nil {
@@ -284,6 +295,7 @@ func (a *App) createFacilityDetail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) updateFacilityDetail(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -309,6 +321,7 @@ func (a *App) updateFacilityDetail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) deleteFacilityDetail(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -323,6 +336,10 @@ func (a *App) deleteFacilityDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
+}
+
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 }
 
 func (a *App) initializeRoutes() {
