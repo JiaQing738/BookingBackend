@@ -100,6 +100,18 @@ func (a *App) getBookings(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, bookings)
 }
 
+func (a *App) getBookingsCount(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+
+	count, err := getBookingsCount(a.DB)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, count)
+}
+
 func (a *App) createBooking(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	var p booking
@@ -232,6 +244,18 @@ func (a *App) updateBookingConfig(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, p)
 }
 
+func (a *App) getBookingConfigsCount(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+
+	count, err := getBookingConfigsCount(a.DB)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, count)
+}
+
 func (a *App) getFacilityDetail(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	vars := mux.Vars(r)
@@ -338,8 +362,27 @@ func (a *App) deleteFacilityDetail(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
 }
 
+func (a *App) getFacilityDetailsCount(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+
+	count, err := getFacilityDetailsCount(a.DB)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, count)
+}
+
 func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+}
+
+func (a *App) optionsEnableCors(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	return
 }
 
 func (a *App) initializeRoutes() {
@@ -356,4 +399,13 @@ func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/facilityDetail/{id:[0-9]+}", a.getFacilityDetail).Methods("GET")
 	a.Router.HandleFunc("/facilityDetail/{id:[0-9]+}", a.updateFacilityDetail).Methods("PUT")
 	a.Router.HandleFunc("/facilityDetail/{id:[0-9]+}", a.deleteFacilityDetail).Methods("DELETE")
+	a.Router.HandleFunc("/booking", a.optionsEnableCors).Methods(http.MethodOptions)
+	a.Router.HandleFunc("/booking/{id:[0-9]+}", a.optionsEnableCors).Methods(http.MethodOptions)
+	a.Router.HandleFunc("/bookingConfig/{id:[0-9]+}", a.optionsEnableCors).Methods(http.MethodOptions)
+	a.Router.HandleFunc("/facilityDetail", a.optionsEnableCors).Methods(http.MethodOptions)
+	a.Router.HandleFunc("/facilityDetail/{id:[0-9]+}", a.optionsEnableCors).Methods(http.MethodOptions)
+	a.Router.HandleFunc("/bookingsCount", a.getBookingsCount).Methods("GET")
+	a.Router.HandleFunc("/bookingConfigsCount", a.getBookingConfigsCount).Methods("GET")
+	a.Router.HandleFunc("/facilityDetailsCount", a.getFacilityDetailsCount).Methods("GET")
+	a.Router.Use(mux.CORSMethodMiddleware(a.Router))
 }
