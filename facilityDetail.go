@@ -67,3 +67,15 @@ func getFacilityDetails(db *sql.DB, start, count int) ([]facilityDetail, error) 
 
 	return facilityDetails, nil
 }
+
+func getFacilityDetailsCount(db *sql.DB) (int, error) {
+
+	var count int
+	err := db.QueryRow("SELECT COUNT (id) FROM booking.facility_detail").Scan(&count)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}

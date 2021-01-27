@@ -46,3 +46,15 @@ func getBookingConfigs(db *sql.DB, start, count int) ([]bookingConfig, error) {
 
 	return bookingConfigs, nil
 }
+
+func getBookingConfigsCount(db *sql.DB) (int, error) {
+
+	var count int
+	err := db.QueryRow("SELECT COUNT (id) FROM booking.booking_config").Scan(&count)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
