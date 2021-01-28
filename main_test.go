@@ -370,7 +370,7 @@ func TestGetNonExistentFacilityDetail(t *testing.T) {
 func TestCreateFacilityDetail(t *testing.T) {
 	clearFacilityDetailTable()
 
-	var jsonStr = []byte(`{"name":"Meeting Room L1-01", "level": 1, "description": "Meeting Room", "status": "OPEN", "transaction_dt": "2021-01-23 10:00:00+08"}`)
+	var jsonStr = []byte(`{"name":"Meeting Room L1-01", "level": "1", "description": "Meeting Room", "status": "OPEN", "transaction_dt": "2021-01-23 10:00:00+08"}`)
 	req, _ := http.NewRequest("POST", "/facilityDetail", bytes.NewBuffer(jsonStr))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -381,15 +381,15 @@ func TestCreateFacilityDetail(t *testing.T) {
 	json.Unmarshal(response.Body.Bytes(), &m)
 
 	if m["id"] != 1.0 {
-		t.Errorf("Expected Facility Detail ID to be '1'. Got '%v'", m["id"])
+		t.Errorf("Expected Facility Detail ID to be 1. Got '%v'", m["id"])
 	}
 
 	if m["name"] != "Meeting Room L1-01" {
 		t.Errorf("Expected name to be 'Meeting Room L1-01'. Got '%v'", m["name"])
 	}
 
-	if m["level"] != 1.0 {
-		t.Errorf("Expected level to be 1. Got '%v'", m["level"])
+	if m["level"] != "1" {
+		t.Errorf("Expected level to be '1'. Got '%v'", m["level"])
 	}
 
 	if m["description"] != "Meeting Room" {
@@ -412,7 +412,7 @@ func addFacilityDetail(count int) {
 	}
 
 	for i := 0; i < count; i++ {
-		a.DB.Exec("INSERT INTO booking.facility_detail(name, level, description, status, transaction_dt) VALUES($1, $2, $3, $4, $5)", "Meeting Room L"+strconv.Itoa(i), strconv.Itoa(i), "Meeting Room", "OPEN", "2021-01-24 10:00:00+08")
+		a.DB.Exec("INSERT INTO booking.facility_detail(name, level, description, status, transaction_dt) VALUES($1, $2, $3, $4, $5)", "Meeting Room L"+strconv.Itoa(i), "L"+strconv.Itoa(i), "Meeting Room", "OPEN", "2021-01-24 10:00:00+08")
 	}
 }
 
@@ -436,7 +436,7 @@ func TestUpdateFacilityDetail(t *testing.T) {
 	var originalFacilityDetail map[string]interface{}
 	json.Unmarshal(response.Body.Bytes(), &originalFacilityDetail)
 
-	var jsonStr = []byte(`{"name":"Meeting Room L1-01", "level": 1, "description": "Meeting Rm", "status": "OPEN", "transaction_dt": "2021-01-23 12:00:00+08"}`)
+	var jsonStr = []byte(`{"name":"Meeting Room L1-01", "level": "1", "description": "Meeting Rm", "status": "OPEN", "transaction_dt": "2021-01-23 12:00:00+08"}`)
 	req, _ = http.NewRequest("PUT", "/facilityDetail/1", bytes.NewBuffer(jsonStr))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -451,8 +451,8 @@ func TestUpdateFacilityDetail(t *testing.T) {
 		t.Errorf("Expected the name to change from '%v' to 'Meeting Room L1-01'. Got '%v'", originalFacilityDetail["name"], m["name"])
 	}
 
-	if m["level"] != 1.0 {
-		t.Errorf("Expected the level to change from '%v' to 1. Got '%v'", originalFacilityDetail["level"], m["level"])
+	if m["level"] != "1" {
+		t.Errorf("Expected the level to change from '%v' to '1'. Got '%v'", originalFacilityDetail["level"], m["level"])
 	}
 
 	if m["description"] != "Meeting Rm" {
@@ -472,7 +472,7 @@ func TestUpdateFacilityDetail(t *testing.T) {
 	}
 }
 
-func TestDeleteFacilityDetai(t *testing.T) {
+func TestDeleteFacilityDetail(t *testing.T) {
 	clearFacilityDetailTable()
 	addFacilityDetail(1)
 
@@ -488,4 +488,67 @@ func TestDeleteFacilityDetai(t *testing.T) {
 	req, _ = http.NewRequest("GET", "/facilityDetail/1", nil)
 	response = executeRequest(req)
 	checkResponseCode(t, http.StatusNotFound, response.Code)
+}
+
+func TextGetBookingsCount(t *testing.T) {
+	clearBookingTable()
+	req, _ := http.NewRequest("GET", "/bookingsCount", nil)
+	response := executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	var count int
+	json.Unmarshal(response.Body.Bytes(), &count)
+
+	if count != 0 {
+		t.Errorf("Expected the count to be 0. Got %d", count)
+	}
+	addBookings(5)
+
+	req, _ = http.NewRequest("GET", "/bookingsCount", nil)
+	response = executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	json.Unmarshal(response.Body.Bytes(), &count)
+
+	if count != 5 {
+		t.Errorf("Expected the count to be 5. Got %d", count)
+	}
+}
+
+func TextGetBookingConfigsCount(t *testing.T) {
+	req, _ := http.NewRequest("GET", "/bookingConfigsCount", nil)
+	response := executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	var count int
+	json.Unmarshal(response.Body.Bytes(), &count)
+
+	if count != 4 {
+		t.Errorf("Expected the count to be 4. Got %d", count)
+	}
+}
+
+func TextGetFacilityDetailsCount(t *testing.T) {
+	clearFacilityDetailTable()
+	req, _ := http.NewRequest("GET", "/facilityDetailsCount", nil)
+	response := executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	var count int
+	json.Unmarshal(response.Body.Bytes(), &count)
+
+	if count != 0 {
+		t.Errorf("Expected the count to be 0. Got %d", count)
+	}
+	addFacilityDetail(5)
+
+	req, _ = http.NewRequest("GET", "/facilityDetailsCount", nil)
+	response = executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	json.Unmarshal(response.Body.Bytes(), &count)
+
+	if count != 5 {
+		t.Errorf("Expected the count to be 5. Got %d", count)
+	}
 }
