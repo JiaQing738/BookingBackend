@@ -374,6 +374,31 @@ func (a *App) getFacilityDetailsCount(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, count)
 }
 
+func (a *App) authenticate(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	var p login
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&p); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	account, err := p.authenticate(a.DB)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			respondWithError(w, http.StatusBadRequest, "Login failed")
+			return
+		} else {
+			respondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	respondWithJSON(w, http.StatusOK, account)
+}
+
 func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 }
@@ -407,5 +432,7 @@ func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/bookingsCount", a.getBookingsCount).Methods("GET")
 	a.Router.HandleFunc("/bookingConfigsCount", a.getBookingConfigsCount).Methods("GET")
 	a.Router.HandleFunc("/facilityDetailsCount", a.getFacilityDetailsCount).Methods("GET")
+	a.Router.HandleFunc("/login", a.authenticate).Methods("POST")
+	a.Router.HandleFunc("/login", a.optionsEnableCors).Methods(http.MethodOptions)
 	a.Router.Use(mux.CORSMethodMiddleware(a.Router))
 }
