@@ -583,6 +583,11 @@ func TestLogin(t *testing.T) {
 	response := executeRequest(req)
 	checkResponseCode(t, http.StatusBadRequest, response.Code)
 
+	jsonStr = []byte(`{"user_id":"wrongAccount", "password": "TestAccountPassword"}`)
+	req, _ = http.NewRequest("POST", "/login", bytes.NewBuffer(jsonStr))
+	response = executeRequest(req)
+	checkResponseCode(t, http.StatusBadRequest, response.Code)
+
 	jsonStr = []byte(`{"user_id":"testAccount", "password": "TestAccountPassword"}`)
 	req, _ = http.NewRequest("POST", "/login", bytes.NewBuffer(jsonStr))
 	response = executeRequest(req)
