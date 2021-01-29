@@ -61,6 +61,16 @@ const facilityDetailTableCreationQuery = `CREATE TABLE IF NOT EXISTS booking.fac
 	CONSTRAINT facility_detail_pkey PRIMARY KEY (id)
 )`
 
+const accountTableCreationQuery = `CREATE TABLE IF NOT EXISTS booking.account
+(
+    id SERIAL,
+    user_id text NOT NULL UNIQUE,
+	admin boolean,
+	email text,
+    password text NOT NULL,
+	CONSTRAINT account_pkey PRIMARY KEY (id)
+)`
+
 func ensureTableExists() {
 	if _, err := a.DB.Exec(bookingTableCreationQuery); err != nil {
 		log.Fatal(err)
@@ -71,6 +81,10 @@ func ensureTableExists() {
 	}
 
 	if _, err := a.DB.Exec(facilityDetailTableCreationQuery); err != nil {
+		log.Fatal(err)
+	}
+
+	if _, err := a.DB.Exec(accountTableCreationQuery); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -490,7 +504,7 @@ func TestDeleteFacilityDetail(t *testing.T) {
 	checkResponseCode(t, http.StatusNotFound, response.Code)
 }
 
-func TextGetBookingsCount(t *testing.T) {
+func TestGetBookingsCount(t *testing.T) {
 	clearBookingTable()
 	req, _ := http.NewRequest("GET", "/bookingsCount", nil)
 	response := executeRequest(req)
@@ -515,7 +529,7 @@ func TextGetBookingsCount(t *testing.T) {
 	}
 }
 
-func TextGetBookingConfigsCount(t *testing.T) {
+func TestGetBookingConfigsCount(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/bookingConfigsCount", nil)
 	response := executeRequest(req)
 	checkResponseCode(t, http.StatusOK, response.Code)
@@ -528,7 +542,7 @@ func TextGetBookingConfigsCount(t *testing.T) {
 	}
 }
 
-func TextGetFacilityDetailsCount(t *testing.T) {
+func TestGetFacilityDetailsCount(t *testing.T) {
 	clearFacilityDetailTable()
 	req, _ := http.NewRequest("GET", "/facilityDetailsCount", nil)
 	response := executeRequest(req)
@@ -551,4 +565,43 @@ func TextGetFacilityDetailsCount(t *testing.T) {
 	if count != 5 {
 		t.Errorf("Expected the count to be 5. Got %d", count)
 	}
+}
+
+func addTestAccount() {
+	a.DB.Exec("INSERT INTO booking.account(user_id, admin, email, password) VALUES ($1, $2, $3, crypt($4, gen_salt('bf')))", "testAccount", false, "testAccount@mail.com", "TestAccountPassword")
+}
+
+func removeTestAccount() {
+	a.DB.Exec("DELETE FROM booking.account WHERE user_id=$1", "testAccount")
+}
+
+func TestLogin(t *testing.T) {
+	addTestAccount()
+
+	var jsonStr = []byte(`{"user_id":"testAccount", "password": "wrongpassword"}`)
+	req, _ := http.NewRequest("POST", "/login", bytes.NewBuffer(jsonStr))
+	response := executeRequest(req)
+	checkResponseCode(t, http.StatusBadRequest, response.Code)
+
+	jsonStr = []byte(`{"user_id":"testAccount", "password": "TestAccountPassword"}`)
+	req, _ = http.NewRequest("POST", "/login", bytes.NewBuffer(jsonStr))
+	response = executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	var m map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &m)
+
+	if m["user_id"] != "testAccount" {
+		t.Errorf("Expected the user_id to be testAccount. Got '%v'", m["user_id"])
+	}
+
+	if m["admin"] != false {
+		t.Errorf("Expected the admin to be false. Got '%v'", m["admin"])
+	}
+
+	if m["email"] != "testAccount@mail.com" {
+		t.Errorf("Expected the email to be testAccount@mail.com. Got '%v'", m["email"])
+	}
+
+	removeTestAccount()
 }

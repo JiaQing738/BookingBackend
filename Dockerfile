@@ -4,6 +4,7 @@ ADD main.go /app
 ADD booking.go /app
 ADD bookingConfig.go /app
 ADD facilityDetail.go /app
+ADD account.go /app
 ADD app.go /app
 ADD go.mod /app
 WORKDIR /app
