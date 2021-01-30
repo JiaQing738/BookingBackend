@@ -581,21 +581,28 @@ func TestLogin(t *testing.T) {
 	var jsonStr = []byte(`{"user_id":"testAccount", "password": "wrongpassword"}`)
 	req, _ := http.NewRequest("POST", "/login", bytes.NewBuffer(jsonStr))
 	response := executeRequest(req)
-	checkResponseCode(t, http.StatusBadRequest, response.Code)
+	checkResponseCode(t, http.StatusOK, response.Code)
+	var m map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &m)
+	if m["error"] != "Login failed" {
+		t.Errorf("Expected the error to be 'Login failed'. Got '%v'", m["error"])
+	}
 
 	jsonStr = []byte(`{"user_id":"wrongAccount", "password": "TestAccountPassword"}`)
 	req, _ = http.NewRequest("POST", "/login", bytes.NewBuffer(jsonStr))
 	response = executeRequest(req)
-	checkResponseCode(t, http.StatusBadRequest, response.Code)
+	checkResponseCode(t, http.StatusOK, response.Code)
+	json.Unmarshal(response.Body.Bytes(), &m)
+	if m["error"] != "Login failed" {
+		t.Errorf("Expected the error to be 'Login failed'. Got '%v'", m["error"])
+	}
 
 	jsonStr = []byte(`{"user_id":"testAccount", "password": "TestAccountPassword"}`)
 	req, _ = http.NewRequest("POST", "/login", bytes.NewBuffer(jsonStr))
 	response = executeRequest(req)
 	checkResponseCode(t, http.StatusOK, response.Code)
 
-	var m map[string]interface{}
 	json.Unmarshal(response.Body.Bytes(), &m)
-
 	if m["user_id"] != "testAccount" {
 		t.Errorf("Expected the user_id to be testAccount. Got '%v'", m["user_id"])
 	}
