@@ -150,7 +150,7 @@ func TestCreateBooking(t *testing.T) {
 
 	clearBookingTable()
 
-	var jsonStr = []byte(`{"user_id":"test", "email": "test@email.com", "purpose": "nil", "facility_id": 1, "start_dt": "2021-01-24 10:00:00+08", "end_dt": "2021-01-24 18:00:00+08", "transaction_dt": "2021-01-23 10:00:00+08"}`)
+	var jsonStr = []byte(`{"user_id":"test", "email": "test@email.com", "purpose": "nil", "facility_id": 1, "start_dt": "2021-01-24 10:00:00+08", "end_dt": "2021-01-24 18:00:00+08"}`)
 	req, _ := http.NewRequest("POST", "/booking", bytes.NewBuffer(jsonStr))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -188,10 +188,6 @@ func TestCreateBooking(t *testing.T) {
 		t.Errorf("Expected end_dt to be '2021-01-24 18:00:00+08'. Got '%v'", m["end_dt"])
 	}
 
-	if m["transaction_dt"] != "2021-01-23 10:00:00+08" {
-		t.Errorf("Expected transaction_dt to be '2021-01-23 10:00:00+08'. Got '%v'", m["transaction_dt"])
-	}
-
 }
 
 func addBookings(count int) {
@@ -224,7 +220,7 @@ func TestUpdateBooking(t *testing.T) {
 	var originalBooking map[string]interface{}
 	json.Unmarshal(response.Body.Bytes(), &originalBooking)
 
-	var jsonStr = []byte(`{"user_id":"updated", "email": "updated@email.com", "purpose": "updated", "facility_id": 2, "start_dt": "2021-01-24 11:00:00+08", "end_dt": "2021-01-24 17:00:00+08", "transaction_dt": "2021-01-23 11:00:00+08"}`)
+	var jsonStr = []byte(`{"user_id":"updated", "email": "updated@email.com", "purpose": "updated", "facility_id": 2, "start_dt": "2021-01-24 11:00:00+08", "end_dt": "2021-01-24 17:00:00+08"}`)
 	req, _ = http.NewRequest("PUT", "/booking/1", bytes.NewBuffer(jsonStr))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -257,10 +253,6 @@ func TestUpdateBooking(t *testing.T) {
 
 	if m["end_dt"] != "2021-01-24 17:00:00+08" {
 		t.Errorf("Expected the email to change from '%v' to '2021-01-24 17:00:00+08'. Got '%v'", originalBooking["end_dt"], m["end_dt"])
-	}
-
-	if m["transaction_dt"] != "2021-01-23 11:00:00+08" {
-		t.Errorf("Expected the email to change from '%v' to '2021-01-23 11:00:00+08'. Got '%v'", originalBooking["transaction_dt"], m["transaction_dt"])
 	}
 
 	if m["id"] != originalBooking["id"] {
@@ -384,7 +376,7 @@ func TestGetNonExistentFacilityDetail(t *testing.T) {
 func TestCreateFacilityDetail(t *testing.T) {
 	clearFacilityDetailTable()
 
-	var jsonStr = []byte(`{"name":"Meeting Room L1-01", "level": "1", "description": "Meeting Room", "status": "OPEN", "transaction_dt": "2021-01-23 10:00:00+08"}`)
+	var jsonStr = []byte(`{"name":"Meeting Room L1-01", "level": "1", "description": "Meeting Room", "status": "OPEN"}`)
 	req, _ := http.NewRequest("POST", "/facilityDetail", bytes.NewBuffer(jsonStr))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -412,10 +404,6 @@ func TestCreateFacilityDetail(t *testing.T) {
 
 	if m["status"] != "OPEN" {
 		t.Errorf("Expected status to be 'OPEN'. Got '%v'", m["status"])
-	}
-
-	if m["transaction_dt"] != "2021-01-23 10:00:00+08" {
-		t.Errorf("Expected transaction_dt to be '2021-01-23 10:00:00+08'. Got '%v'", m["transaction_dt"])
 	}
 
 }
@@ -450,7 +438,7 @@ func TestUpdateFacilityDetail(t *testing.T) {
 	var originalFacilityDetail map[string]interface{}
 	json.Unmarshal(response.Body.Bytes(), &originalFacilityDetail)
 
-	var jsonStr = []byte(`{"name":"Meeting Room L1-01", "level": "1", "description": "Meeting Rm", "status": "OPEN", "transaction_dt": "2021-01-23 12:00:00+08"}`)
+	var jsonStr = []byte(`{"name":"Meeting Room L1-01", "level": "1", "description": "Meeting Rm", "status": "OPEN"}`)
 	req, _ = http.NewRequest("PUT", "/facilityDetail/1", bytes.NewBuffer(jsonStr))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -475,10 +463,6 @@ func TestUpdateFacilityDetail(t *testing.T) {
 
 	if m["status"] != "OPEN" {
 		t.Errorf("Expected the status to change from '%v' to 'OPEN'. Got '%v'", originalFacilityDetail["status"], m["status"])
-	}
-
-	if m["transaction_dt"] != "2021-01-23 12:00:00+08" {
-		t.Errorf("Expected the email to change from '%v' to '2021-01-23 12:00:00+08'. Got '%v'", originalFacilityDetail["transaction_dt"], m["transaction_dt"])
 	}
 
 	if m["id"] != originalFacilityDetail["id"] {

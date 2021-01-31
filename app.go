@@ -83,6 +83,7 @@ func (a *App) getBookings(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	count, _ := strconv.Atoi(r.FormValue("count"))
 	start, _ := strconv.Atoi(r.FormValue("start"))
+	userid := r.FormValue("user_id")
 
 	if count < 1 {
 		count = 10
@@ -91,7 +92,7 @@ func (a *App) getBookings(w http.ResponseWriter, r *http.Request) {
 		start = 0
 	}
 
-	bookings, err := getBookings(a.DB, start, count)
+	bookings, err := getBookings(a.DB, start, count, userid)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -103,7 +104,9 @@ func (a *App) getBookings(w http.ResponseWriter, r *http.Request) {
 func (a *App) getBookingsCount(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 
-	count, err := getBookingsCount(a.DB)
+	userid := r.FormValue("user_id")
+
+	count, err := getBookingsCount(a.DB, userid)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -283,6 +286,7 @@ func (a *App) getFacilityDetails(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	count, _ := strconv.Atoi(r.FormValue("count"))
 	start, _ := strconv.Atoi(r.FormValue("start"))
+	status := r.FormValue("status")
 
 	if count < 1 {
 		count = 10
@@ -291,7 +295,7 @@ func (a *App) getFacilityDetails(w http.ResponseWriter, r *http.Request) {
 		start = 0
 	}
 
-	facilityDetails, err := getFacilityDetails(a.DB, start, count)
+	facilityDetails, err := getFacilityDetails(a.DB, start, count, status)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -364,8 +368,9 @@ func (a *App) deleteFacilityDetail(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) getFacilityDetailsCount(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
+	status := r.FormValue("status")
 
-	count, err := getFacilityDetailsCount(a.DB)
+	count, err := getFacilityDetailsCount(a.DB, status)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return

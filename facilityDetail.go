@@ -47,10 +47,20 @@ func (p *facilityDetail) createFacilityDetail(db *sql.DB) error {
 	return nil
 }
 
-func getFacilityDetails(db *sql.DB, start, count int) ([]facilityDetail, error) {
-	rows, err := db.Query(
-		"SELECT id, name, level, description, status, transaction_dt FROM booking.facility_detail LIMIT $1 OFFSET $2",
-		count, start)
+func getFacilityDetails(db *sql.DB, start, count int, status string) ([]facilityDetail, error) {
+
+	var rows *sql.Rows
+	var err error
+
+	if len(status) > 0 {
+		rows, err = db.Query(
+			"SELECT id, name, level, description, status, transaction_dt FROM booking.facility_detail WHERE status=$1 LIMIT $2 OFFSET $3",
+			status, count, start)
+	} else {
+		rows, err = db.Query(
+			"SELECT id, name, level, description, status, transaction_dt FROM booking.facility_detail LIMIT $1 OFFSET $2",
+			count, start)
+	}
 
 	if err != nil {
 		return nil, err
@@ -71,10 +81,16 @@ func getFacilityDetails(db *sql.DB, start, count int) ([]facilityDetail, error) 
 	return facilityDetails, nil
 }
 
-func getFacilityDetailsCount(db *sql.DB) (int, error) {
+func getFacilityDetailsCount(db *sql.DB, status string) (int, error) {
 
 	var count int
-	err := db.QueryRow("SELECT COUNT (id) FROM booking.facility_detail").Scan(&count)
+	var err error
+
+	if len(status) > 0 {
+		err = db.QueryRow("SELECT COUNT (id) FROM booking.facility_detail WHERE status=$1", status).Scan(&count)
+	} else {
+		err = db.QueryRow("SELECT COUNT (id) FROM booking.facility_detail").Scan(&count)
+	}
 
 	if err != nil {
 		return 0, err
