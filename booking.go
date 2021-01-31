@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"time"
 )
 
 type booking struct {
@@ -21,9 +22,10 @@ func (p *booking) getBooking(db *sql.DB) error {
 }
 
 func (p *booking) updateBooking(db *sql.DB) error {
+	currentTime := time.Now()
 	_, err :=
 		db.Exec("UPDATE booking.booking SET user_id=$1, email=$2, purpose=$3, facility_id=$4, start_dt=$5, end_dt=$6, transaction_dt=$7 WHERE id=$8",
-			p.UserID, p.Email, p.Purpose, p.FacilityID, p.StartTime, p.EndTime, p.TransactionTime, p.ID)
+			p.UserID, p.Email, p.Purpose, p.FacilityID, p.StartTime, p.EndTime, currentTime, p.ID)
 
 	return err
 }
@@ -35,9 +37,10 @@ func (p *booking) deleteBooking(db *sql.DB) error {
 }
 
 func (p *booking) createBooking(db *sql.DB) error {
+	currentTime := time.Now()
 	err := db.QueryRow(
 		"INSERT INTO booking.booking(user_id, email, purpose, facility_id, start_dt, end_dt, transaction_dt) VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id",
-		p.UserID, p.Email, p.Purpose, p.FacilityID, p.StartTime, p.EndTime, p.TransactionTime).Scan(&p.ID)
+		p.UserID, p.Email, p.Purpose, p.FacilityID, p.StartTime, p.EndTime, currentTime).Scan(&p.ID)
 
 	if err != nil {
 		return err
@@ -46,10 +49,18 @@ func (p *booking) createBooking(db *sql.DB) error {
 	return nil
 }
 
-func getBookings(db *sql.DB, start, count int) ([]booking, error) {
-	rows, err := db.Query(
-		"SELECT id, user_id, email, purpose, facility_id, start_dt, end_dt, transaction_dt FROM booking.booking LIMIT $1 OFFSET $2",
-		count, start)
+func getBookings(db *sql.DB, start, count int, userid string) ([]booking, error) {
+	var rows *sql.Rows
+	var err error
+	if len(userid) > 0 {
+		rows, err = db.Query(
+			"SELECT id, user_id, email, purpose, facility_id, start_dt, end_dt, transaction_dt FROM booking.booking WHERE user_id=$1 LIMIT $2 OFFSET $3",
+			userid, count, start)
+	} else {
+		rows, err = db.Query(
+			"SELECT id, user_id, email, purpose, facility_id, start_dt, end_dt, transaction_dt FROM booking.booking LIMIT $1 OFFSET $2",
+			count, start)
+	}
 
 	if err != nil {
 		return nil, err
@@ -70,14 +81,20 @@ func getBookings(db *sql.DB, start, count int) ([]booking, error) {
 	return bookings, nil
 }
 
-func getBookingsCount(db *sql.DB) (int, error) {
+func getBookingsCount(db *sql.DB, userid string) (int, error) {
 
 	var count int
-	err := db.QueryRow("SELECT COUNT (id) FROM booking.booking").Scan(&count)
+	var err error
+	if len(userid) > 0 {
+		err = db.QueryRow("SELECT COUNT (id) FROM booking.booking WHERE user_id=$1", userid).Scan(&count)
+	} else {
+		err = db.QueryRow("SELECT COUNT (id) FROM booking.booking").Scan(&count)
+	}
 
 	if err != nil {
 		return 0, err
 	}
 
 	return count, nil
+
 }
