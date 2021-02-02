@@ -363,6 +363,12 @@ func (a *App) deleteFacilityDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	b := booking{FacilityID: id}
+	if err := b.deleteAllBookingByFacilityID(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
 }
 
