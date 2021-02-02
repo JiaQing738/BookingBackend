@@ -96,5 +96,10 @@ func getBookingsCount(db *sql.DB, userid string) (int, error) {
 	}
 
 	return count, nil
+}
 
+func (p *booking) deleteAllBookingByFacilityID(db *sql.DB) error {
+	_, err := db.Exec("DELETE FROM booking.booking WHERE facility_id=$1", p.FacilityID)
+
+	return err
 }

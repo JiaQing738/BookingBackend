@@ -24,7 +24,7 @@ func TestMain(m *testing.M) {
 	ensureTableExists()
 	code := m.Run()
 	clearBookingTable()
-	resetRecord()
+	resetBookingConfigRecord()
 	clearFacilityDetailTable()
 	os.Exit(code)
 }
@@ -101,7 +101,7 @@ func clearFacilityDetailTable() {
 	a.DB.Exec("ALTER SEQUENCE booking.facility_detail_id_seq RESTART WITH 1")
 }
 
-func resetRecord() {
+func resetBookingConfigRecord() {
 	a.DB.Exec("UPDATE booking.booking_config SET key='max_hr_per_booking', value='2' WHERE id=1")
 }
 
@@ -115,6 +115,34 @@ func TestEmptyBookingTable(t *testing.T) {
 
 	if body := response.Body.String(); body != "[]" {
 		t.Errorf("Expected an empty array. Got %s", body)
+	}
+}
+
+func TestGetBookings(t *testing.T) {
+	clearBookingTable()
+	addBookings(2)
+
+	req, _ := http.NewRequest("GET", "/bookings", nil)
+	response := executeRequest(req)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	var bookings []interface{}
+	json.Unmarshal(response.Body.Bytes(), &bookings)
+
+	if len(bookings) != 2 {
+		t.Errorf("Expected an array of size 2. Got %d", len(bookings))
+	}
+
+	req, _ = http.NewRequest("GET", "/bookings?user_id=user_1", nil)
+	response = executeRequest(req)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	json.Unmarshal(response.Body.Bytes(), &bookings)
+
+	if len(bookings) != 1 {
+		t.Errorf("Expected an array of size 1. Got %d", len(bookings))
 	}
 }
 
@@ -358,6 +386,45 @@ func TestEmptyFacilityDetailTable(t *testing.T) {
 	}
 }
 
+func TestGetFacilityDetails(t *testing.T) {
+	clearFacilityDetailTable()
+	addFacilityDetail(2)
+
+	req, _ := http.NewRequest("GET", "/facilityDetails", nil)
+	response := executeRequest(req)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	var bookings []interface{}
+	json.Unmarshal(response.Body.Bytes(), &bookings)
+
+	if len(bookings) != 2 {
+		t.Errorf("Expected an array of size 2. Got %d", len(bookings))
+	}
+
+	req, _ = http.NewRequest("GET", "/facilityDetails?status=OPEN", nil)
+	response = executeRequest(req)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	json.Unmarshal(response.Body.Bytes(), &bookings)
+
+	if len(bookings) != 2 {
+		t.Errorf("Expected an array of size 2. Got %d", len(bookings))
+	}
+
+	req, _ = http.NewRequest("GET", "/facilityDetails?status=MAINTENANCE", nil)
+	response = executeRequest(req)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	json.Unmarshal(response.Body.Bytes(), &bookings)
+
+	if len(bookings) != 0 {
+		t.Errorf("Expected an array of size 0. Got %d", len(bookings))
+	}
+}
+
 func TestGetNonExistentFacilityDetail(t *testing.T) {
 	clearFacilityDetailTable()
 
@@ -471,11 +538,17 @@ func TestUpdateFacilityDetail(t *testing.T) {
 }
 
 func TestDeleteFacilityDetail(t *testing.T) {
+	clearBookingTable()
 	clearFacilityDetailTable()
 	addFacilityDetail(1)
+	addBookings(1)
 
 	req, _ := http.NewRequest("GET", "/facilityDetail/1", nil)
 	response := executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	req, _ = http.NewRequest("GET", "/booking/1", nil)
+	response = executeRequest(req)
 	checkResponseCode(t, http.StatusOK, response.Code)
 
 	req, _ = http.NewRequest("DELETE", "/facilityDetail/1", nil)
@@ -484,6 +557,10 @@ func TestDeleteFacilityDetail(t *testing.T) {
 	checkResponseCode(t, http.StatusOK, response.Code)
 
 	req, _ = http.NewRequest("GET", "/facilityDetail/1", nil)
+	response = executeRequest(req)
+	checkResponseCode(t, http.StatusNotFound, response.Code)
+
+	req, _ = http.NewRequest("GET", "/booking/1", nil)
 	response = executeRequest(req)
 	checkResponseCode(t, http.StatusNotFound, response.Code)
 }
@@ -510,6 +587,16 @@ func TestGetBookingsCount(t *testing.T) {
 
 	if count != 5 {
 		t.Errorf("Expected the count to be 5. Got %d", count)
+	}
+
+	req, _ = http.NewRequest("GET", "/bookingsCount?user_id=user_1", nil)
+	response = executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	json.Unmarshal(response.Body.Bytes(), &count)
+
+	if count != 1 {
+		t.Errorf("Expected the count to be 1. Got %d", count)
 	}
 }
 
@@ -548,6 +635,26 @@ func TestGetFacilityDetailsCount(t *testing.T) {
 
 	if count != 5 {
 		t.Errorf("Expected the count to be 5. Got %d", count)
+	}
+
+	req, _ = http.NewRequest("GET", "/facilityDetailsCount?status=OPEN", nil)
+	response = executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	json.Unmarshal(response.Body.Bytes(), &count)
+
+	if count != 5 {
+		t.Errorf("Expected the count to be 5. Got %d", count)
+	}
+
+	req, _ = http.NewRequest("GET", "/facilityDetailsCount?status=MAINTENANCE", nil)
+	response = executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	json.Unmarshal(response.Body.Bytes(), &count)
+
+	if count != 0 {
+		t.Errorf("Expected the count to be 0. Got %d", count)
 	}
 }
 
