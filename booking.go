@@ -103,3 +103,15 @@ func (p *booking) deleteAllBookingByFacilityID(db *sql.DB) error {
 
 	return err
 }
+
+func (p *booking) getOverlappingBookings(db *sql.DB) (int, error) {
+	var count int
+	var err error
+	err = db.QueryRow("SELECT COUNT (id) FROM booking.booking WHERE (facility_id=$1) AND ((start_dt <= $2::timestamp AND end_dt > $2::timestamp) OR (start_dt < $3::timestamp AND end_dt >= $3::timestamp))", p.FacilityID, p.StartTime, p.EndTime).Scan(&count)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}

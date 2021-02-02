@@ -125,7 +125,21 @@ func (a *App) createBooking(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	if err := p.createBooking(a.DB); err != nil {
+	var count int
+	var err error
+	count, err = p.getOverlappingBookings(a.DB)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if count > 0 {
+		respondWithError(w, http.StatusInternalServerError, "Overlap Bookings")
+		return
+	}
+
+	err = p.createBooking(a.DB)
+	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
